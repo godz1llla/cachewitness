@@ -125,6 +125,6 @@ Reports contain hashes, variant names, and JSON pointers. They do not include ra
 
 The checked endpoint must return a successful HTTP response containing JSON. Reset responses only need a successful HTTP status; they do not need a JSON body.
 
-JavaScript numbers cannot exactly represent every integer that JSON permits. CacheWitness rejects unsafe integers and non-finite parsed numbers with `unsupported_json_number` instead of comparing potentially rounded values as if they were trustworthy. Encode large identifiers and exact high-precision quantities as strings in the response. This tool is not an arbitrary-precision JSON comparator.
+JavaScript numbers cannot exactly represent every number that JSON permits. CacheWitness rejects unsafe integers, non-finite values, underflow, and decimal spellings that lose precision with `unsupported_json_number`. For example, `1e-400` cannot silently become zero and `1.000000000000000001` cannot silently become one. Equivalent spellings such as `1.00` and `1e0` are accepted. Encode large identifiers and exact high-precision quantities as strings in the response. This tool is not an arbitrary-precision JSON comparator.
 
 Object property order is ignored. Array order is significant. Response headers are not compared, and the CLI does not maintain a browser cookie jar between requests: express each variant's required test credentials explicitly in its headers.

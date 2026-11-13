@@ -55,6 +55,23 @@ test('rejects JSON numbers that could silently collapse different identifiers', 
   }
 });
 
+test('rejects underflow and rounded decimal values rather than comparing them equal', async (t) => {
+  const numbers = ['1e-400', '-1e-400', '1.000000000000000001', '0.100000000000000001', '1e-999999999999999999999999'];
+  const baseUrl = await serve(t, (req, res) => res.end(`{"value":${numbers[Number(req.url.slice(1))]}}`));
+  for (let index = 0; index < numbers.length; index += 1) {
+    await assert.rejects(requestJson({ baseUrl, path: `/${index}` }), { code: 'unsupported_json_number' });
+  }
+});
+
+test('accepts equivalent decimal spellings and finite round-trip decimals', async (t) => {
+  const numbers = ['1e3', '0.1', '1.00', '-0', '0e-999999999999999999999999', '1.20e-1', '1E+0003', '-2.5e-3', '5e-324'];
+  const baseUrl = await serve(t, (req, res) => res.end(`{"value":${numbers[Number(req.url.slice(1))]}}`));
+  for (let index = 0; index < numbers.length; index += 1) {
+    const result = await requestJson({ baseUrl, path: `/${index}` });
+    assert.equal(result.body.value, Number(numbers[index]));
+  }
+});
+
 test('invalid UTF-8 is rejected instead of normalized to replacement characters', async (t) => {
   const baseUrl = await serve(t, (_, res) => res.end(Buffer.from([0x22, 0xc3, 0x28, 0x22])));
   await assert.rejects(requestJson({ baseUrl, path: '/' }), { code: 'invalid_json' });

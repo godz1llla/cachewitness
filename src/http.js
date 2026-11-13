@@ -7,6 +7,32 @@ export class AuditHttpError extends Error {
   }
 }
 
+function unsupportedNumber() {
+  return new AuditHttpError('unsupported_json_number', 'JSON number is unsafe or loses precision. Encode large or high-precision values as strings.');
+}
+
+// Compare decimal spellings without expanding powers of ten. This catches
+// rounding and underflow while accepting equivalent forms like 1.00 and 1e0.
+function canonicalDecimal(text) {
+  const negative = text.startsWith('-');
+  const unsigned = negative ? text.slice(1) : text;
+  const [mantissa, exponentText = '0'] = unsigned.toLowerCase().split('e');
+  const [whole, fraction = ''] = mantissa.split('.');
+  const digits = (whole + fraction).replace(/^0+/u, '');
+  if (digits === '') return '0';
+  let significantEnd = digits.length;
+  while (digits[significantEnd - 1] === '0') significantEnd -= 1;
+  const significant = digits.slice(0, significantEnd);
+  const exponentDigits = exponentText.replace(/^[+-]/u, '').replace(/^0+/u, '') || '0';
+  // No representable nonzero Number needs an exponent with this magnitude;
+  // bound parsing work even when a hostile JSON body contains a huge exponent.
+  if (exponentDigits.length > 12) throw unsupportedNumber();
+  const exponentSign = exponentText.startsWith('-') ? -1n : 1n;
+  const exponent = exponentSign * BigInt(exponentDigits) - BigInt(fraction.length)
+    + BigInt(digits.length - significant.length);
+  return `${negative ? '-' : ''}${significant}e${exponent}`;
+}
+
 /** Request a bounded JSON body. Redirects never receive credentials. */
 export async function requestJson({
   baseUrl, path, method = 'GET', headers = {}, query = {}, body,
@@ -69,9 +95,13 @@ export async function requestJson({
     if (!expectJson) return { status: response.status, body: null };
     try {
       const text = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks, size));
-      const parsed = JSON.parse(text, (_key, value) => {
-        if (typeof value === 'number' && (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value)))) {
-          throw new AuditHttpError('unsupported_json_number', 'JSON contains an unsafe integer or non-finite number. Encode large identifiers as strings.');
+      const parsed = JSON.parse(text, (_key, value, context) => {
+        if (typeof value === 'number') {
+          if (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value))
+            || typeof context?.source !== 'string'
+            || canonicalDecimal(context.source) !== canonicalDecimal(value.toString())) {
+            throw unsupportedNumber();
+          }
         }
         return value;
       });

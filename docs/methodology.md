@@ -24,7 +24,7 @@ Every baseline request starts after its own reset. The repetitions must agree af
 
 Normalization ignores object property order, preserves array order, and excludes explicitly configured JSON pointers. HTTP status is part of the comparison.
 
-The JSON comparison rejects unsafe integers and non-finite parsed numbers rather than treating rounded values as reliable evidence. Represent large identifiers as strings. Headers are not compared.
+The JSON comparison rejects unsafe integers, overflow, underflow, and decimal spellings that lose precision when parsed by JavaScript. For example, `1.000000000000000001` cannot silently compare equal to `1`. Equivalent spellings such as `1.00` and `1e0` are accepted. Represent large identifiers and high-precision values as strings. Headers are not compared.
 
 ## 2. Exercise each ordered pair
 
