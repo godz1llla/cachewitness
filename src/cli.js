@@ -1,19 +1,22 @@
-import { readFile, realpath } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { ConfigError, loadConfig, normalizeConfig } from './config.js';
-import { exitCode, formatReport, writeReport } from './report.js';
+import { exitCode, formatReport, validateReportPaths, writeHtmlReport, writeReport } from './report.js';
+import { formatInitResult, initConfig, presets } from './init.js';
 
 const help = `CacheWitness — find cross-user and cross-tenant cache contamination.
 
 Usage:
-  cachewitness check <config.json> [--json] [--output report.json] [--allow-remote]
-  cachewitness demo [--fixed] [--json] [--output report.json]
+  cachewitness init [config.json] [--preset auth|tenant|currency] [--json]
+  cachewitness check <config.json> [--json] [--output report.json] [--html report.html] [--allow-remote]
+  cachewitness demo [--fixed] [--json] [--output report.json] [--html report.html]
   cachewitness --help
   cachewitness --version
 
 Options:
   --json          Print a machine-readable report to stdout.
   --output PATH   Save a JSON report atomically (response values are omitted).
+  --html PATH     Save a self-contained HTML report for offline viewing.
+  --preset NAME   Starter configuration: auth (default), tenant, or currency.
   --allow-remote  Allow a non-loopback test target. Reset calls change its cache.
   --fixed         Run the demo with an identity-aware cache key.
 
@@ -27,26 +30,29 @@ function parse(argv) {
   if (argv.length === 0 || (argv.length === 1 && ['--help', '-h'].includes(argv[0]))) return { help: true };
   if (argv.length === 1 && ['--version', '-v'].includes(argv[0])) return { version: true };
   const [command, ...args] = argv;
-  if (!['check', 'demo'].includes(command)) throw new ConfigError('Expected check or demo. Run cachewitness --help.');
+  if (!['check', 'demo', 'init'].includes(command)) throw new ConfigError('Expected init, check, or demo. Run cachewitness --help.');
   const options = { command, json: false, fixed: false, allowRemote: false };
   const used = new Set();
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (['--json', '--fixed', '--allow-remote', '--output'].includes(arg)) {
+    if (['--json', '--fixed', '--allow-remote', '--output', '--html', '--preset'].includes(arg)) {
       if (used.has(arg)) throw new ConfigError('An option was supplied more than once.');
       used.add(arg);
-      if (arg === '--output') {
-        if (!args[i + 1] || args[i + 1].startsWith('-')) throw new ConfigError('--output needs a file path.');
-        options.output = args[++i];
+      if (['--output', '--html', '--preset'].includes(arg)) {
+        if (!args[i + 1] || args[i + 1].startsWith('-')) throw new ConfigError(`${arg} needs ${arg === '--preset' ? 'a preset name' : 'a file path'}.`);
+        options[arg.slice(2)] = args[++i];
       } else if (arg === '--json') options.json = true;
       else if (arg === '--fixed') options.fixed = true;
       else options.allowRemote = true;
-    } else if (command === 'check' && !options.config && !arg.startsWith('-')) options.config = arg;
+    } else if (['check', 'init'].includes(command) && !options.config && !arg.startsWith('-')) options.config = arg;
     else throw new ConfigError('Unknown argument. Run cachewitness --help.');
   }
   if (command === 'check' && !options.config) throw new ConfigError('check requires a JSON configuration file.');
-  if (command === 'check' && options.fixed) throw new ConfigError('--fixed is only available for demo.');
-  if (command === 'demo' && options.allowRemote) throw new ConfigError('--allow-remote is only available for check.');
+  if (command !== 'demo' && options.fixed) throw new ConfigError('--fixed is only available for demo.');
+  if (command !== 'check' && options.allowRemote) throw new ConfigError('--allow-remote is only available for check.');
+  if (command !== 'init' && options.preset) throw new ConfigError('--preset is only available for init.');
+  if (command === 'init' && (options.output || options.html)) throw new ConfigError('--output and --html are only available for check or demo.');
+  if (options.preset && !presets.includes(options.preset)) throw new ConfigError('Unknown preset. Choose auth, tenant, or currency.');
   return options;
 }
 
@@ -65,11 +71,12 @@ export async function main(argv = process.argv.slice(2)) {
       process.stdout.write(`${pkg.version}\n`);
       return 0;
     }
-    if (options.output && options.config) {
-      const source = await realpath(options.config).catch(() => resolve(options.config));
-      const destination = await realpath(options.output).catch(() => resolve(options.output));
-      if (source === destination) throw new ConfigError('The output file must not overwrite the configuration file.');
+    if (options.command === 'init') {
+      const result = await initConfig(options.config, { preset: options.preset });
+      process.stdout.write(`${options.json ? JSON.stringify(result, null, 2) : formatInitResult(result)}\n`);
+      return 0;
     }
+    await validateReportPaths(options);
     let config;
     if (options.command === 'demo') {
       const { startDemo, createDemoConfig } = await import('./demo.js');
@@ -80,7 +87,11 @@ export async function main(argv = process.argv.slice(2)) {
     const report = await audit(config, { signal: controller.signal });
     if (options.output) {
       try { await writeReport(options.output, report); }
-      catch { throw new ConfigError('Could not write the report file.'); }
+      catch { throw new ConfigError('Could not write the JSON report file.'); }
+    }
+    if (options.html) {
+      try { await writeHtmlReport(options.html, report); }
+      catch { throw new ConfigError('Could not write the HTML report file.'); }
     }
     process.stdout.write(`${options.json ? JSON.stringify(report, null, 2) : formatReport(report)}\n`);
     return exitCode(report);
