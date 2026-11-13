@@ -12,6 +12,18 @@ CacheWitness runs those requests in both orders and compares them with repeatabl
 
 Zero runtime dependencies. Local CLI. JSON reports for CI. No model, account, or API key required.
 
+## Install a release
+
+Requires Node.js 22 or newer. Install the packaged CLI directly from the [GitHub release](https://github.com/godz1llla/cachewitness/releases/tag/v0.1.0):
+
+```sh
+npm install --global https://github.com/godz1llla/cachewitness/releases/download/v0.1.0/godz1llla-cachewitness-0.1.0.tgz
+cachewitness demo
+cachewitness demo --fixed
+```
+
+The broken demo intentionally exits with code 1; the fixed version exits with 0. This package is distributed through GitHub Releases, not the npm registry. To inspect or develop the source, use the clone workflow below.
+
 ![Illustrated request sequence: a cold Bob response differs from the response Bob receives after Alice primes a shared cache.](assets/demo.svg)
 
 ## Try the broken and fixed versions

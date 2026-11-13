@@ -5,7 +5,7 @@
   "type": "module",
   "bin": { "cachewitness": "bin/cachewitness.js" },
   "engines": { "node": ">=22" },
-  "files": ["bin/", "src/", "examples/", "docs/configuration.md", "docs/methodology.md"],
+  "files": ["bin/", "src/", "examples/", "assets/demo.svg", "SECURITY.md", "CONTRIBUTING.md", "docs/configuration.md", "docs/methodology.md"],
   "scripts": {
     "test": "node --test",
     "demo": "node bin/cachewitness.js demo",

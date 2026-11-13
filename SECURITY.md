@@ -4,7 +4,7 @@ CacheWitness is a test tool that sends HTTP requests and invokes a reset operati
 
 ## Report a vulnerability
 
-Do not open a public issue containing credentials or a live cross-user data leak. If this repository offers GitHub private vulnerability reporting, use its **Security → Report a vulnerability** flow. Otherwise, contact the maintainer privately through the contact information on their [GitHub profile](https://github.com/godz1llla) and request a private reporting channel before sending sensitive details.
+Do not open a public issue containing credentials or a live cross-user data leak. Use [GitHub private vulnerability reporting](https://github.com/godz1llla/cachewitness/security/advisories/new) through **Security → Report a vulnerability**.
 
 For a problem in an application tested by CacheWitness, contact that application's owner. An audit finding does not automatically indicate a vulnerability in CacheWitness itself.
 
