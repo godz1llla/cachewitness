@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdtemp, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createStarterConfig, initConfig, presets } from '../src/init.js';
@@ -59,9 +59,13 @@ test('init refuses existing and dangling symlink destinations', async t => {
     }
     await assert.rejects(initConfig(alias), /already exists/);
     assert.equal(await readFile(target, 'utf8'), 'original');
+    assert.equal((await lstat(alias)).isSymbolicLink(), true);
     const dangling = join(dir, 'dangling.json');
     await symlink(join(dir, 'not-created.json'), dangling, 'file');
+    const destination = await readlink(dangling);
     await assert.rejects(initConfig(dangling), /already exists/);
+    assert.equal((await lstat(dangling)).isSymbolicLink(), true);
+    assert.equal(await readlink(dangling), destination);
     await assert.rejects(readFile(join(dir, 'not-created.json')), { code: 'ENOENT' });
   } finally { await rm(dir, { recursive: true, force: true }); }
 });

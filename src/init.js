@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { lstat, writeFile } from 'node:fs/promises';
 import { ConfigError } from './config.js';
 
 export const presets = ['auth', 'tenant', 'currency'];
@@ -35,7 +35,18 @@ export function createStarterConfig(preset = 'auth') {
 export async function initConfig(filename = 'cachewitness.json', { preset = 'auth' } = {}) {
   const config = createStarterConfig(preset);
   try {
-    // O_EXCL refuses existing regular files AND symlinks, including dangling ones.
+    // On Windows, wx may follow a dangling symlink and create its target.
+    // Inspect the directory entry itself before the exclusive file creation.
+    const existing = await lstat(filename).catch(error => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (existing) {
+      const error = new Error('Destination exists.');
+      error.code = 'EEXIST';
+      throw error;
+    }
+    // Keep wx so another ordinary file cannot be overwritten after the check.
     await writeFile(filename, `${JSON.stringify(config, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
   } catch (error) {
     if (error.code === 'EEXIST') throw new ConfigError('The configuration destination already exists. Choose a new file; init never overwrites files or symlinks.');
