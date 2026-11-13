@@ -1,0 +1,45 @@
+name: CacheWitness
+description: Find cross-user cache contamination and attach a readable evidence summary to your CI run.
+author: godz1llla
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  config:
+    description: Path to a CacheWitness JSON configuration inside the checked-out workspace.
+    required: true
+  allow-remote:
+    description: Allow an explicitly configured non-loopback test environment whose cache may be reset.
+    default: 'false'
+  report-directory:
+    description: Directory inside the workspace for report.json and report.html.
+    default: cachewitness-reports
+
+outputs:
+  status:
+    description: pass, fail, inconclusive, or error.
+    value: ${{ steps.audit.outputs.status }}
+  report-json:
+    description: Absolute path to the JSON report, when one could be saved.
+    value: ${{ steps.audit.outputs.report-json }}
+  report-html:
+    description: Absolute path to the standalone HTML report, when one could be saved.
+    value: ${{ steps.audit.outputs.report-html }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: '22'
+        package-manager-cache: false
+    - name: Check cache isolation
+      id: audit
+      shell: bash
+      env:
+        CACHEWITNESS_ACTION_PATH: ${{ github.action_path }}
+        CACHEWITNESS_CONFIG: ${{ inputs.config }}
+        CACHEWITNESS_ALLOW_REMOTE: ${{ inputs.allow-remote }}
+        CACHEWITNESS_REPORT_DIRECTORY: ${{ inputs.report-directory }}
+      run: node "$CACHEWITNESS_ACTION_PATH/scripts/action.js"
