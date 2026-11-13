@@ -1,11 +1,28 @@
 {
   "name": "@godz1llla/cachewitness",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Find cross-user cache contamination with reproducible HTTP request sequences.",
   "type": "module",
-  "bin": { "cachewitness": "bin/cachewitness.js" },
-  "engines": { "node": ">=22" },
-  "files": ["bin/", "src/", "examples/", "assets/demo.svg", "SECURITY.md", "CONTRIBUTING.md", "docs/configuration.md", "docs/methodology.md"],
+  "bin": {
+    "cachewitness": "bin/cachewitness.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "examples/",
+    "assets/banner.svg",
+    "assets/demo.svg",
+    "assets/report-preview.jpg",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "docs/configuration.md",
+    "docs/methodology.md",
+    "docs/integrations.md"
+  ],
   "scripts": {
     "test": "node --test",
     "demo": "node bin/cachewitness.js demo",
@@ -13,9 +30,22 @@
     "example:server": "node examples/server.js",
     "verify:package": "node scripts/verify-package.js"
   },
-  "repository": { "type": "git", "url": "git+https://github.com/godz1llla/cachewitness.git" },
-  "bugs": { "url": "https://github.com/godz1llla/cachewitness/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/godz1llla/cachewitness.git"
+  },
+  "bugs": {
+    "url": "https://github.com/godz1llla/cachewitness/issues"
+  },
   "homepage": "https://github.com/godz1llla/cachewitness#readme",
-  "keywords": ["cache", "redis", "testing", "multi-tenant", "cache-isolation", "cli", "security-testing"],
+  "keywords": [
+    "cache",
+    "redis",
+    "testing",
+    "multi-tenant",
+    "cache-isolation",
+    "cli",
+    "security-testing"
+  ],
   "license": "MIT"
 }

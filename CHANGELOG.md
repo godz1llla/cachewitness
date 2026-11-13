@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — 2026-11-13
+
+- Add standalone offline HTML reports with an ordered-pair matrix, baseline evidence, and individual check details via `--html <path>`.
+- Generate editable configurations with `init` presets for bearer-token identities, tenants, and currencies.
+- Add a native GitHub Action with JSON and HTML artifacts, status and report-path outputs, and a job summary.
+- Provide an integration guide covering the local fixture, test-only reset adapters, environment variables, and CI setup.
+- Refresh the project presentation and document the distinction between observed contamination and an established cache root cause.
+
+The CLI remains dependency-free at runtime. Existing JSON configurations and exit-code meanings are retained.
+
 ## 0.1.0 — 2026-11-13
 
 Initial public release.

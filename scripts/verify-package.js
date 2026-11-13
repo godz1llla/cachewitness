@@ -29,18 +29,32 @@ try {
       return error;
     }
   };
-  const vulnerable = await run(['demo', '--json', '--output', join(temporary, 'report.json')]);
+  assert(packed.files.some(f => f.path === 'src/html-report.js'));
+  assert(packed.files.some(f => f.path === 'docs/integrations.md'));
+  const vulnerable = await run(['demo', '--json', '--output', join(temporary, 'report.json'), '--html', join(temporary, 'report.html')]);
   assert.equal(vulnerable.code, 1, vulnerable.stderr);
   const witness = JSON.parse(vulnerable.stdout);
   assert.equal(witness.status, 'fail');
   assert.equal(witness.summary.contamination, 2);
   assert.deepEqual(JSON.parse(await readFile(join(temporary, 'report.json'), 'utf8')), witness);
+  const html = await readFile(join(temporary, 'report.html'), 'utf8');
+  assert.match(html, /<!doctype html>/i);
+  assert.ok(!html.includes('Bearer demo-alice'));
+  const generated = await run(['init', 'currency.json', '--preset', 'currency', '--json']);
+  assert.equal(generated.code, 0, generated.stderr);
+  assert.equal(JSON.parse(generated.stdout).status, 'created');
+  const configuration = JSON.parse(await readFile(join(temporary, 'currency.json'), 'utf8'));
+  assert.equal(configuration.variants.length, 3);
+  assert.equal(configuration.variants[2].query.currency, 'KZT');
+  const repeated = await run(['init', 'currency.json', '--json']);
+  assert.equal(repeated.code, 2);
+  assert.deepEqual(JSON.parse(await readFile(join(temporary, 'currency.json'), 'utf8')), configuration);
   const fixed = await run(['demo', '--fixed', '--json']);
   assert.equal(fixed.code, 0, fixed.stderr);
   assert.equal(JSON.parse(fixed.stdout).status, 'pass');
   const help = await run(['--help']);
   assert.equal(help.code, 0);
-  console.log(`Verified ${packed.filename}: installed CLI detects both contamination directions; fixed cache passes.`);
+  console.log(`Verified ${packed.filename}: installed CLI detects both contamination directions, writes offline HTML, creates a currency configuration, and passes the fixed cache.`);
 } finally {
   await rm(temporary, { recursive: true, force: true });
 }
