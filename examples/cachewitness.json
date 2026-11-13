@@ -1,0 +1,14 @@
+{
+  "baseUrl": "${CACHEWITNESS_BASE_URL}",
+  "request": { "path": "/api/dashboard" },
+  "variants": [
+    { "name": "alice", "headers": { "authorization": "Bearer ${CACHEWITNESS_ALICE_TOKEN}" } },
+    { "name": "bob", "headers": { "authorization": "Bearer ${CACHEWITNESS_BOB_TOKEN}" } }
+  ],
+  "reset": {
+    "path": "/__cachewitness/reset",
+    "method": "POST",
+    "headers": { "x-cachewitness-demo": "reset-synthetic-cache" }
+  },
+  "ignore": ["/generatedAt"]
+}
