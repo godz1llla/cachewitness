@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">CacheWitness: two users, one shared cache key</title>
+  <desc id="desc">An illustrated experiment: Alice and Bob have distinct cold responses. After Alice warms a broken cache, Bob receives Alice's response. A tenant-scoped key restores isolation.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101e29"/><stop offset="1" stop-color="#091218"/></linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#718992" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="1200" height="560" rx="18" fill="url(#bg)"/>
+  <g font-family="ui-monospace, SFMono-Regular, Consolas, monospace">
+    <text x="48" y="52" fill="#8ee6cf" font-size="15" letter-spacing="3">CACHEWITNESS / HTTP ISOLATION TESTING</text>
+    <text x="48" y="106" fill="#f0f5f5" font-size="36" font-weight="700">Your tests pass. Do your users stay separate?</text>
+    <text x="48" y="141" fill="#adc0c5" font-size="17">Compare cold responses with what happens after another user warms the cache.</text>
+    <rect x="48" y="180" width="532" height="208" rx="12" fill="#14242e" stroke="#31414a"/>
+    <rect x="604" y="180" width="548" height="208" rx="12" fill="#14242e" stroke="#31414a"/>
+    <text x="72" y="216" fill="#adc0c5" font-size="13" letter-spacing="2">01 / ESTABLISH COLD BASELINES</text>
+    <text x="628" y="216" fill="#adc0c5" font-size="13" letter-spacing="2">02 / PRIME, THEN PROBE</text>
+    <text x="76" y="271" fill="#8ee6cf" font-size="18">Alice</text>
+    <path d="M157 265 H270" stroke="#718992" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="290" y="271" fill="#8ee6cf" font-size="18">Alice's dashboard</text>
+    <text x="76" y="328" fill="#9cc9ff" font-size="18">Bob</text>
+    <path d="M157 322 H270" stroke="#718992" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="290" y="328" fill="#9cc9ff" font-size="18">Bob's dashboard</text>
+    <text x="628" y="266" fill="#d1dde0" font-size="16">RESET → ALICE → ALICE → BOB</text>
+    <rect x="628" y="291" width="500" height="64" rx="8" fill="#382425" stroke="#94544c"/>
+    <text x="648" y="318" fill="#ffb2a4" font-size="15" font-weight="700">CONTAMINATION</text>
+    <text x="648" y="341" fill="#f1d2cc" font-size="15">Bob receives Alice's cold response.</text>
+    <rect x="48" y="412" width="1104" height="96" rx="12" fill="#102b28" stroke="#28594e"/>
+    <text x="72" y="447" fill="#8ee6cf" font-size="16">Fix the key: dashboard → dashboard:{tenant}</text>
+    <text x="72" y="479" fill="#c1d8d1" font-size="16">Same experiment. Isolated responses. Exit 0.</text>
+    <text x="1146" y="538" fill="#78939d" font-size="12" text-anchor="end">ILLUSTRATED BUILT-IN DEMO · NO REAL USER DATA</text>
+  </g>
+</svg>

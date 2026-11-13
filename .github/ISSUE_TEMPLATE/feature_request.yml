@@ -1,0 +1,25 @@
+name: Feature request
+description: Describe an isolation scenario CacheWitness should support.
+title: "feat: "
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Scenario
+      description: What behavior do you need to check? Include a concrete example without sensitive data.
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current limitation
+      description: What happens when you try to express this with the existing configuration?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Expected evidence
+      description: What observations should produce pass, fail, or inconclusive results?
+    validations:
+      required: true

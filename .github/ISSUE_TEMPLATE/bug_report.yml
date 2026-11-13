@@ -1,0 +1,38 @@
+name: Bug report
+description: Report an incorrect result or a problem running CacheWitness.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use synthetic data. Do not include credentials, private response bodies, or a live cross-user leak. See SECURITY.md for private reporting.
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node.js version, operating system, and CacheWitness version or commit.
+      placeholder: Node 22.x, Ubuntu, commit abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: A minimal test server, sanitized configuration, and the command you ran.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What verdict or behavior did you expect, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: Include a reviewed, sanitized report if useful. Field names and variant names remain visible in reports.
+    validations:
+      required: true
