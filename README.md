@@ -1,163 +1,134 @@
 # CacheWitness
 
-**Find HTTP responses that change when a different user warms the cache.**
+![CacheWitness — the request before yours matters.](assets/banner.svg)
+
+**Catch responses that cross user, tenant, or currency boundaries after another request primes the cache.**
 
 [![CI](https://github.com/godz1llla/cachewitness/actions/workflows/ci.yml/badge.svg)](https://github.com/godz1llla/cachewitness/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/godz1llla/cachewitness)](https://github.com/godz1llla/cachewitness/releases)
 [![Node.js](https://img.shields.io/badge/node-%E2%89%A522-43853d)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A test can pass for Alice and pass for Bob, yet fail when Alice makes her request first. A shared cache key can cause Bob to receive Alice's dashboard, another tenant's settings, or a price in the wrong currency.
+Alice's test passes. Bob's test passes. Then Alice makes her request first, and Bob receives her dashboard.
 
-CacheWitness runs those requests in both orders and compares them with repeatable cold baselines. It gives you a small, reproducible witness: **who primed the response, who received it, and which JSON fields changed**.
+CacheWitness repeats cold baselines, exercises both request orders, and records the difference. Run it locally or in CI; open the evidence in a standalone HTML report.
 
-Zero runtime dependencies. Local CLI. JSON reports for CI. No model, account, or API key required.
+**Zero runtime dependencies · No account or model required · JSON + offline HTML · GitHub Action**
 
-## Install a release
+[Quick start](#try-it-in-30-seconds) · [Connect your app](#connect-your-application) · [GitHub Action](#add-a-check-to-github-actions) · [Methodology](docs/methodology.md)
 
-Requires Node.js 22 or newer. Install the packaged CLI directly from the [GitHub release](https://github.com/godz1llla/cachewitness/releases/tag/v0.1.0):
+## Try it in 30 seconds
+
+Requires Node.js 22 or newer. Install the packaged CLI from GitHub Releases:
 
 ```sh
-npm install --global https://github.com/godz1llla/cachewitness/releases/download/v0.1.0/godz1llla-cachewitness-0.1.0.tgz
-cachewitness demo
-cachewitness demo --fixed
+npm install --global https://github.com/godz1llla/cachewitness/releases/download/v0.2.0/godz1llla-cachewitness-0.2.0.tgz
+cachewitness demo --html broken.html
 ```
 
-The broken demo intentionally exits with code 1; the fixed version exits with 0. This package is distributed through GitHub Releases, not the npm registry. To inspect or develop the source, use the clone workflow below.
+Open `broken.html` in your browser. The demo starts a local synthetic server, finds a shared-key bug, and shuts the server down. **Exit code 1 is expected: the experiment found contamination.**
 
-![Illustrated request sequence: a cold Bob response differs from the response Bob receives after Alice primes a shared cache.](assets/demo.svg)
+Now run the same experiment with the cache key fixed:
 
-## Try the broken and fixed versions
+```sh
+cachewitness demo --fixed --html fixed.html
+```
 
-Requires Node.js 22 or newer and Git.
+This exits with code 0. Each tenant receives its own response. The package is distributed through GitHub Releases; it is not published to the npm registry.
+
+![Actual HTML report from the synthetic broken-cache demo: both request orders expose contamination.](assets/report-preview.jpg)
+
+Want to inspect the output first? Download the [broken-cache report](https://github.com/godz1llla/cachewitness/releases/download/v0.2.0/broken.html) or [fixed-cache report](https://github.com/godz1llla/cachewitness/releases/download/v0.2.0/fixed.html) and open it locally. Both use public synthetic fixtures.
+
+## One small experiment, useful evidence
+
+```text
+Cold Alice → Alice's response       Cold Bob → Bob's response
+
+Reset → Alice → Alice → Bob
+                          └─ Did Bob still get Bob's response?
+```
+
+A missing request dimension in a cache key can expose another user's data, reuse the wrong tenant's settings, or return a price in the wrong currency. CacheWitness tests the observable effect through HTTP:
+
+- **Repeated cold baselines** establish each variant's normal response.
+- **Every ordered pair** exercises A → B and B → A separately.
+- **Fingerprints and changed fields** identify which response differed without dumping its values.
+- **An explicit incomplete verdict** prevents unstable or indistinguishable cases from passing silently.
+
+The HTML report contains a pair matrix and evidence for individual checks. It is a single offline file, with no server required to open it. JSON output supports your existing CI tooling.
+
+## Connect your application
+
+Generate a configuration and choose the request dimension to vary:
+
+```sh
+cachewitness init --preset auth
+# Also available: --preset tenant or --preset currency
+```
+
+Edit `cachewitness.json` to match your endpoint and test identities. Set the referenced environment variables, including the base URL and reset token. Then run:
+
+```sh
+cachewitness check cachewitness.json --output report.json --html report.html
+```
+
+You supply **one JSON GET endpoint and a synchronous reset endpoint**. The reset operation clears the relevant test cache before each baseline and request pair. Use a dedicated environment without competing traffic. Remote targets require `--allow-remote`.
+
+[Integration guide](docs/integrations.md) includes the bundled local server, a test-only Express reset adapter, tenant and currency presets, and a CI example. The [configuration reference](docs/configuration.md) covers every field and option.
+
+## Add a check to GitHub Actions
+
+Check out your repository and start your test application first. Then add these steps:
+
+```yaml
+- name: Check response isolation
+  id: cachewitness
+  uses: godz1llla/cachewitness@v0.2.0
+  with:
+    config: cachewitness.json
+  env:
+    CACHEWITNESS_BASE_URL: http://127.0.0.1:3000
+    CACHEWITNESS_ALICE_TOKEN: ${{ secrets.TEST_ALICE_TOKEN }}
+    CACHEWITNESS_BOB_TOKEN: ${{ secrets.TEST_BOB_TOKEN }}
+    CACHEWITNESS_RESET_TOKEN: ${{ secrets.TEST_RESET_TOKEN }}
+
+- name: Keep the evidence
+  if: always()
+  uses: actions/upload-artifact@v7
+  with:
+    name: cachewitness-report
+    path: cachewitness-reports/
+```
+
+The action sets up Node.js 22, writes JSON and HTML reports, and adds a job summary. A failing or incomplete audit fails the action. Your app remains responsible for its dependencies, fixtures, startup, and reset endpoint. See [action inputs and outputs](docs/integrations.md#github-action).
+
+## Read the verdict
+
+| Result | Meaning | Exit |
+| --- | --- | --- |
+| **Pass** | The target retained its stable response in every covered pair. | `0` |
+| **Contamination** | The target changed to the source's cold response. | `1` |
+| **Drift** | The target changed but matched neither baseline. | `1` |
+| **Inconclusive** | Some baselines were unstable or could not be distinguished. | `2` |
+| **Error** | Configuration, a request, or a response prevented a reliable audit. | `2` |
+
+**A witness is evidence of a response change, not proof of its root cause.** Other shared state can produce the same behavior. A pass covers the supplied endpoint, variants, sequence, and compared fields; it does not prove universal isolation or confirm internal cache hits. [How the experiment works →](docs/methodology.md)
+
+## What stays in a report
+
+Reports omit raw response values, request credentials, reset bodies, and full URLs. They retain variant names, JSON property paths, fingerprints, and outcome metadata. Review those before sharing: names may be sensitive, and hashes are not anonymization. [Security and report handling →](SECURITY.md)
+
+## Develop from source
 
 ```sh
 git clone https://github.com/godz1llla/cachewitness.git
 cd cachewitness
 npm ci
-npm run demo
-```
-
-The demo starts an isolated local HTTP server with an intentionally incorrect cache key, audits it, and shuts it down. **Exit code 1 is the expected result:** CacheWitness found contamination.
-
-```sh
+npm test
 npm run demo:fixed
 ```
 
-The fixed demo includes the user's identity in the cache key. The same audit passes with exit code 0.
+Use `node bin/cachewitness.js` in place of `cachewitness` when running from a checkout. `npm run demo` deliberately exits with code 1. Contributions that add a reproducible scenario or improve verdict accuracy are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-```text
-Cold request as Alice ────────────► Alice's response
-Cold request as Bob ──────────────► Bob's response
-
-Reset → Alice → Alice → Bob ──────► Alice's response reaches Bob
-                                   ^ contamination witness
-```
-
-The second priming request checks that the source response stays stable. The audit also tries the reverse order.
-
-To try the configuration-file workflow, start the included server in one terminal:
-
-```sh
-npm run example:server
-```
-
-In a second terminal, use the included synthetic fixture variables:
-
-```sh
-node --env-file=examples/demo.env bin/cachewitness.js check examples/cachewitness.json --output report.json
-```
-
-This intentionally returns exit code 1. Stop the server with Ctrl-C, restart it using `npm run example:server -- --fixed`, and run the same check again to see a pass. The bundled environment file contains public demo values, not credentials for a real service.
-
-## Check your application
-
-Use a dedicated test environment with an explicit endpoint that clears the cache involved in the scenario. CacheWitness calls this endpoint repeatedly. Keep other traffic away while the audit runs.
-
-Save a JSON configuration as `cachewitness.json`:
-
-```json
-{
-  "baseUrl": "${CACHEWITNESS_BASE_URL}",
-  "request": {
-    "path": "/api/dashboard"
-  },
-  "variants": [
-    {
-      "name": "alice",
-      "headers": { "Authorization": "Bearer ${CACHEWITNESS_ALICE_TOKEN}" }
-    },
-    {
-      "name": "bob",
-      "headers": { "Authorization": "Bearer ${CACHEWITNESS_BOB_TOKEN}" }
-    }
-  ],
-  "reset": {
-    "path": "/__test/reset-cache",
-    "method": "POST"
-  },
-  "ignore": ["/requestId"]
-}
-```
-
-Set the referenced environment variables to your test server and test credentials, then run:
-
-```sh
-node bin/cachewitness.js check cachewitness.json --output report.json
-```
-
-Use `--json` for machine-readable stdout. Remote hosts require an explicit `--allow-remote`; only use this with an environment you control and intend to reset.
-
-Variant headers override common request headers. Variants can also supply query parameters, making the same workflow useful for language, currency, plan, or tenant isolation.
-
-See the [configuration reference](docs/configuration.md) for the complete schema and examples.
-
-## Understand the result
-
-| Result | What was observed | Exit code |
-| --- | --- | --- |
-| `pass` | Every covered pair returned the target's stable baseline after priming. | `0` |
-| `fail` · contamination | The target changed to the source's cold response. | `1` |
-| `fail` · drift | The target changed, but did not match the source's cold response. | `1` |
-| `inconclusive` | Baselines were unstable or some variants could not be distinguished. | `2` |
-| `error` | A request, reset, response, or configuration prevented the audit from completing. | `2` |
-
-A successful audit applies only to the supplied endpoint, variants, reset behavior, and comparison fields. Identical baselines are **inconclusive**, not evidence that isolation works.
-
-## What makes this useful
-
-- **Sequence matters.** Every ordered pair is exercised; Alice → Bob can behave differently from Bob → Alice.
-- **Cold baselines first.** Each variant is checked repeatedly with a reset before each baseline request.
-- **Evidence without response dumps.** Reports contain fingerprints and changed JSON pointers, not raw response values or authorization headers.
-- **A CI-friendly verdict.** An incomplete check never reports a pass.
-- **Works at the HTTP boundary.** No Redis credentials or application instrumentation are required. You supply the reset adapter.
-
-CacheWitness tests an isolation property. It does not discover all endpoints, infer your application's authorization rules, inspect Redis keys, or prove that a cache caused the observed behavior. Other shared state can produce the same witness. The [methodology](docs/methodology.md) explains the checks and their limits.
-
-Responses must be JSON with representable numeric values. Unsafe integers and non-finite numbers produce an `unsupported_json_number` error; encode large identifiers as strings. See the [response constraints](docs/configuration.md#response-constraints).
-
-## Use in CI
-
-Start your test application, provide test credentials through your CI's secret mechanism, then run:
-
-```sh
-node bin/cachewitness.js check cachewitness.json --output artifacts/cachewitness.json
-```
-
-Let its exit code fail the job. Keep reports as job artifacts according to your team's access and retention policy. Do not run the same resettable environment in parallel with other tests.
-
-## Report privacy
-
-Response bodies are compared in memory. Reports exclude raw response values, request headers, reset bodies, and full URLs. Variant names and JSON property names are still visible. Fingerprints are deterministic hashes, **not encryption or anonymization**; low-entropy values may be guessable. Review reports before sharing them publicly. See [SECURITY.md](SECURITY.md).
-
-## Development
-
-```sh
-npm ci
-npm test
-```
-
-Bug reports with a small reproduction are welcome. A useful contribution is a scenario that the audit gets wrong, with the expected verdict and an explanation. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## License
-
-[MIT](LICENSE).
+[MIT license](LICENSE) · [Changelog](CHANGELOG.md) · [Report a bug](https://github.com/godz1llla/cachewitness/issues/new/choose)

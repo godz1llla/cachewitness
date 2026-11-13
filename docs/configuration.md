@@ -6,7 +6,20 @@ CacheWitness reads JSON data. Configuration files do not execute JavaScript.
 node bin/cachewitness.js check path/to/config.json
 node bin/cachewitness.js check path/to/config.json --json
 node bin/cachewitness.js check path/to/config.json --output artifacts/report.json
+node bin/cachewitness.js check path/to/config.json --html artifacts/report.html
 ```
+
+## Generate a starting configuration
+
+```sh
+node bin/cachewitness.js init --preset auth
+node bin/cachewitness.js init tests/cache-isolation.json --preset tenant
+node bin/cachewitness.js init currency.json --preset currency
+```
+
+The default output is `cachewitness.json`. Presets provide editable configurations for bearer-token identities, tenant headers, or currency query parameters. Review the generated file and populate its environment references before running it. See the [integration guide](integrations.md#generate-your-configuration).
+
+The parent directory must already exist. `init` refuses to overwrite files or symlinks, performs no network requests, and supports `--json` for machine-readable output. Initialization exits with 0 when the file is created and 2 on an error.
 
 ## Fields
 
@@ -111,7 +124,20 @@ HTTP redirects are rejected. Request and reset paths must stay on the configured
 
 ## Output and exit codes
 
-`--json` writes the report to stdout. `--output` writes a JSON report file and can be combined with `--json`. Human-readable output is the default.
+`--json` writes the report to stdout. `--output <path>` writes a JSON report file. `--html <path>` writes a standalone offline HTML report with a pair matrix, baseline evidence, and individual check details. The HTML file does not require a running server. These options can be combined; human-readable stdout remains the default unless `--json` is present.
+
+```sh
+node bin/cachewitness.js check cachewitness.json --json --output artifacts/report.json --html artifacts/report.html
+```
+
+The built-in demos accept the same output options:
+
+```sh
+node bin/cachewitness.js demo --html broken.html
+node bin/cachewitness.js demo --fixed --html fixed.html
+```
+
+The broken demo deliberately exits with 1; the fixed demo exits with 0. Files are reports of those synthetic scenarios, not findings from an external application.
 
 | Exit | Meaning |
 | --- | --- |
@@ -120,6 +146,8 @@ HTTP redirects are rejected. Request and reset paths must stay on the configured
 | `2` | Configuration or operational error, or an inconclusive audit. |
 
 Reports contain hashes, variant names, and JSON pointers. They do not include raw response values, authorization headers, full URLs, or reset request bodies. See [report privacy](../SECURITY.md).
+
+The same privacy limits apply to HTML and JSON. Review reports before uploading them to a public location.
 
 ## Response constraints
 

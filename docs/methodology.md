@@ -53,6 +53,8 @@ For fully distinguishable, stable variants, the default two baseline runs use `4
 
 The report records the source and target names, verdict, response fingerprints, and changed JSON pointers. It does not write raw response values. This makes reports easier to review without copying private account data into CI logs.
 
+Use `--html report.html` for a standalone offline view of the same evidence: the ordered-pair matrix, cold baseline stability, and details for each check. Use `--output report.json` for machine-readable artifacts. Both formats describe the same experiment; the presentation format does not change the audit or its verdict.
+
 JSON field names and variant names can themselves be sensitive. Hashes are deterministic and may reveal equality or permit guessing of low-entropy payloads. They are not an anonymization guarantee.
 
 ## Interpret the verdict carefully
